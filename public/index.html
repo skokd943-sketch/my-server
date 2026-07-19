@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Мессенджер</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -10,6 +10,7 @@
 
 <div id="authScreen" class="screen">
   <div class="auth-box">
+    <div class="logo">💬</div>
     <h1>Мессенджер</h1>
     <input id="authUsername" placeholder="Логин" autocomplete="username">
     <input id="authPassword" type="password" placeholder="Пароль" autocomplete="current-password">
@@ -20,17 +21,46 @@
 </div>
 
 <div id="chatScreen" class="screen hidden">
-  <div class="sidebar">
-    <div class="me">👤 <span id="meName"></span> <button id="logoutBtn">выйти</button></div>
+  <div class="sidebar" id="sidebar">
+    <div class="me">
+      <div class="me-info"><span class="avatar" id="meAvatar"></span><span id="meName"></span></div>
+      <button id="logoutBtn">Выйти</button>
+    </div>
     <div id="contactList" class="contact-list"></div>
   </div>
-  <div class="chat">
-    <div id="chatHeader" class="chat-header">Выберите собеседника</div>
+
+  <div class="chat" id="chatPane">
+    <div id="chatHeader" class="chat-header">
+      <button id="backBtn" class="icon-btn back-btn">←</button>
+      <span class="avatar" id="chatAvatar"></span>
+      <span id="chatTitle">Выберите собеседника</span>
+      <div class="header-actions">
+        <button id="callAudioBtn" class="icon-btn" title="Аудиозвонок">📞</button>
+        <button id="callVideoBtn" class="icon-btn" title="Видеозвонок">🎥</button>
+      </div>
+    </div>
     <div id="messages" class="messages"></div>
     <div class="input-row">
+      <button id="attachBtn" class="icon-btn">📎</button>
+      <input type="file" id="fileInput" hidden accept="image/*,video/*,application/*,.pdf,.doc,.docx,.zip">
       <input id="msgInput" placeholder="Сообщение…" disabled>
+      <button id="micBtn" class="icon-btn" disabled>🎤</button>
       <button id="sendBtn" disabled>➤</button>
     </div>
+  </div>
+</div>
+
+<div id="callOverlay" class="call-overlay hidden">
+  <div class="call-info">
+    <span class="avatar big" id="callAvatar"></span>
+    <div id="callName">—</div>
+    <div id="callStatus">вызов…</div>
+  </div>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <div class="call-controls">
+    <button id="acceptCallBtn" class="call-btn accept hidden">✅</button>
+    <button id="declineCallBtn" class="call-btn decline">✖</button>
   </div>
 </div>
 
