@@ -150,7 +150,13 @@ document.getElementById('fileInput').onchange = async (e) => {
   const uploaded = await uploadFile(file);
   if (!uploaded) return;
   const kind = file.type.startsWith('image/') ? 'image' : 'file';
-  ws.send(JSON.stringify({ type: 'message', to: currentContact, kind, fileUrl: uploaded.url, fileName: uploaded.name }));
+  ws.send(JSON.stringify({ 
+    type: 'message', 
+    to: currentContact, 
+    kind, 
+    fileUrl: uploaded.url, 
+    fileName: uploaded.name 
+  }));
 };
 
 async function uploadFile(file) {
@@ -188,10 +194,18 @@ async function startRecording() {
       stream.getTracks().forEach(t => t.stop());
       mediaRecorder = null;
       if (duration < 1) return;
-      const file = new File([blob], 'voice.webm', { type: 'audio/webm' });
+      const file = new File([blob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
       const uploaded = await uploadFile(file);
       if (!uploaded) return;
-      ws.send(JSON.stringify({ type: 'message', to: currentContact, kind: 'voice', fileUrl: uploaded.url, duration }));
+      // ФИКС: добавляем fileName
+      ws.send(JSON.stringify({ 
+        type: 'message', 
+        to: currentContact, 
+        kind: 'voice', 
+        fileUrl: uploaded.url,
+        fileName: uploaded.name,
+        duration 
+      }));
     };
     mediaRecorder.start();
     micBtn.classList.add('recording');
@@ -230,21 +244,42 @@ async function startCall(withVideo) {
   callPeer = currentContact;
   isCaller = true;
   showCallUI(callPeer, 'Вызов…', false);
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
-  localVideo.srcObject = localStream;
-  createPeerConnection();
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  sendSignal(callPeer, { kind: 'offer', sdp: offer, video: withVideo });
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
+    localVideo.srcObject = localStream;
+    createPeerConnection();
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    sendSignal(callPeer, { kind: 'offer', sdp: offer, video: withVideo });
+    callStatus.textContent = 'Ожидание ответа…';
+  } catch (e) {
+    alert('Нет доступа к камере/микрофону');
+    endCall(false);
+  }
 }
 
 function createPeerConnection() {
   pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-  pc.onicecandidate = (e) => { if (e.candidate) sendSignal(callPeer, { kind: 'ice', candidate: e.candidate }); };
-  pc.ontrack = (e) => { remoteVideo.srcObject = e.streams[0]; callStatus.textContent = 'в разговоре'; };
+  pc.onicecandidate = (e) => { 
+    if (e.candidate) {
+      sendSignal(callPeer, { kind: 'ice', candidate: e.candidate });
+    }
+  };
+  pc.ontrack = (e) => { 
+    remoteVideo.srcObject = e.streams[0]; 
+    callStatus.textContent = 'в разговоре'; 
+  };
   pc.onconnectionstatechange = () => {
-    if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) endCall(false);
+    if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
+      endCall(false);
+    }
+  };
+  // ФИКС: обработка ошибок ICE
+  pc.oniceconnectionstatechange = () => {
+    if (pc.iceConnectionState === 'failed') {
+      endCall(false);
+    }
   };
 }
 
@@ -288,14 +323,19 @@ async function handleSignal(from, payload) {
 async function acceptIncomingCall(withVideo) {
   acceptBtn.classList.add('hidden');
   callStatus.textContent = 'соединение…';
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
-  localVideo.srcObject = localStream;
-  createPeerConnection();
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-  await pc.setRemoteDescription(pendingOffer.sdp);
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  sendSignal(callPeer, { kind: 'answer', sdp: answer });
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
+    localVideo.srcObject = localStream;
+    createPeerConnection();
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    await pc.setRemoteDescription(pendingOffer.sdp);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    sendSignal(callPeer, { kind: 'answer', sdp: answer });
+  } catch (e) {
+    alert('Ошибка подключения');
+    endCall(false);
+  }
 }
 
 function endCall(notify) {
