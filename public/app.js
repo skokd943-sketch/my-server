@@ -23,6 +23,10 @@ async function doAuth(url) {
   authError.textContent = '';
   const username = document.getElementById('authUsername').value.trim();
   const password = document.getElementById('authPassword').value;
+  if (!username || !password) {
+    authError.textContent = 'Заполните все поля';
+    return;
+  }
   try {
     const res = await fetch(url, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -34,7 +38,10 @@ async function doAuth(url) {
     localStorage.setItem('token', token);
     localStorage.setItem('username', myName);
     showChat();
-  } catch (e) { authError.textContent = 'Не удалось связаться с сервером'; }
+  } catch (e) { 
+    authError.textContent = 'Не удалось связаться с сервером';
+    console.error(e);
+  }
 }
 
 function logout() {
@@ -54,36 +61,51 @@ async function showChat() {
 }
 
 async function loadContacts() {
-  const res = await fetch('/api/users', { headers: { Authorization: 'Bearer ' + token } });
-  const users = await res.json();
-  const list = document.getElementById('contactList');
-  list.innerHTML = '';
-  users.forEach(u => {
-    const div = document.createElement('div');
-    div.className = 'contact';
-    div.dataset.user = u;
-    div.innerHTML = `<span class="avatar" data-initial="${initial(u)}"></span><span class="contact-name">${u}</span><span class="dot" data-dot="${u}"></span>`;
-    div.onclick = () => openChat(u);
-    list.appendChild(div);
-  });
+  try {
+    const res = await fetch('/api/users', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) throw new Error('Unauthorized');
+    const users = await res.json();
+    const list = document.getElementById('contactList');
+    list.innerHTML = '';
+    users.forEach(u => {
+      const div = document.createElement('div');
+      div.className = 'contact';
+      div.dataset.user = u;
+      div.innerHTML = `<span class="avatar" data-initial="${initial(u)}"></span><span class="contact-name">${u}</span><span class="dot" data-dot="${u}"></span>`;
+      div.onclick = () => openChat(u);
+      list.appendChild(div);
+    });
+  } catch (e) {
+    console.error('Error loading contacts:', e);
+  }
 }
 
 function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}/ws?token=${token}`);
   ws.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    if (data.type === 'presence') {
-      onlineSet = new Set(data.online);
-      document.querySelectorAll('[data-dot]').forEach(dot => dot.classList.toggle('online', onlineSet.has(dot.dataset.dot)));
-    } else if (data.type === 'message') {
-      const m = data.message;
-      if (currentContact && (m.from === currentContact || m.to === currentContact)) renderMessage(m);
-    } else if (data.type === 'signal') {
-      handleSignal(data.from, data.payload);
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === 'presence') {
+        onlineSet = new Set(data.online);
+        document.querySelectorAll('[data-dot]').forEach(dot => dot.classList.toggle('online', onlineSet.has(dot.dataset.dot)));
+      } else if (data.type === 'message') {
+        const m = data.message;
+        if (currentContact && (m.from === currentContact || m.to === currentContact)) renderMessage(m);
+      } else if (data.type === 'signal') {
+        handleSignal(data.from, data.payload);
+      }
+    } catch (err) {
+      console.error('WS message error:', err);
     }
   };
-  ws.onclose = () => setTimeout(connectWS, 2000);
+  ws.onclose = () => {
+    console.log('WS closed, reconnecting...');
+    setTimeout(connectWS, 2000);
+  };
+  ws.onerror = (err) => {
+    console.error('WS error:', err);
+  };
 }
 
 async function openChat(user) {
@@ -97,9 +119,14 @@ async function openChat(user) {
   document.getElementById('micBtn').disabled = false;
   const box = document.getElementById('messages');
   box.innerHTML = '';
-  const res = await fetch(`/api/messages/${encodeURIComponent(user)}`, { headers: { Authorization: 'Bearer ' + token } });
-  const history = await res.json();
-  history.forEach(renderMessage);
+  try {
+    const res = await fetch(`/api/messages/${encodeURIComponent(user)}`, { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) throw new Error('Failed to load messages');
+    const history = await res.json();
+    history.forEach(renderMessage);
+  } catch (e) {
+    console.error('Error loading messages:', e);
+  }
 }
 
 function formatTime(ts) {
@@ -115,7 +142,7 @@ function renderMessage(m) {
   bubble.className = 'bubble';
 
   if (m.kind === 'image') {
-    bubble.innerHTML = `<img class="msg-image" src="${m.fileUrl}">`;
+    bubble.innerHTML = `<img class="msg-image" src="${m.fileUrl}" onerror="this.style.display='none'">`;
   } else if (m.kind === 'voice') {
     bubble.innerHTML = `<audio class="msg-voice" controls src="${m.fileUrl}"></audio>`;
   } else if (m.kind === 'file') {
@@ -163,10 +190,21 @@ async function uploadFile(file) {
   const form = new FormData();
   form.append('file', file);
   try {
-    const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: form });
-    if (!res.ok) return null;
+    const res = await fetch('/api/upload', { 
+      method: 'POST', 
+      headers: { Authorization: 'Bearer ' + token }, 
+      body: form 
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      console.error('Upload error:', err);
+      return null;
+    }
     return await res.json();
-  } catch (e) { return null; }
+  } catch (e) { 
+    console.error('Upload exception:', e);
+    return null; 
+  }
 }
 
 let mediaRecorder = null;
@@ -193,11 +231,16 @@ async function startRecording() {
       const blob = new Blob(recordedChunks, { type: 'audio/webm' });
       stream.getTracks().forEach(t => t.stop());
       mediaRecorder = null;
-      if (duration < 1) return;
+      if (duration < 1) {
+        alert('Слишком короткое сообщение');
+        return;
+      }
       const file = new File([blob], `voice_${Date.now()}.webm`, { type: 'audio/webm' });
       const uploaded = await uploadFile(file);
-      if (!uploaded) return;
-      // ФИКС: добавляем fileName
+      if (!uploaded) {
+        alert('Не удалось загрузить голосовое сообщение');
+        return;
+      }
       ws.send(JSON.stringify({ 
         type: 'message', 
         to: currentContact, 
@@ -210,15 +253,22 @@ async function startRecording() {
     mediaRecorder.start();
     micBtn.classList.add('recording');
   } catch (e) {
-    alert('Нет доступа к микрофону');
+    alert('Нет доступа к микрофону. Разрешите доступ в настройках браузера.');
+    console.error('Mic error:', e);
   }
 }
 function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
   micBtn.classList.remove('recording');
 }
 
-const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' }
+];
 let pc = null;
 let localStream = null;
 let callPeer = null;
@@ -237,15 +287,26 @@ document.getElementById('callAudioBtn').onclick = () => startCall(false);
 document.getElementById('callVideoBtn').onclick = () => startCall(true);
 declineBtn.onclick = () => endCall(true);
 
-function sendSignal(to, payload) { ws.send(JSON.stringify({ type: 'signal', to, payload })); }
+function sendSignal(to, payload) { 
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ type: 'signal', to, payload }));
+  }
+}
 
 async function startCall(withVideo) {
   if (!currentContact) return;
+  if (!ws || ws.readyState !== 1) {
+    alert('Нет соединения с сервером');
+    return;
+  }
   callPeer = currentContact;
   isCaller = true;
   showCallUI(callPeer, 'Вызов…', false);
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
+    localStream = await navigator.mediaDevices.getUserMedia({ 
+      audio: true, 
+      video: withVideo 
+    });
     localVideo.srcObject = localStream;
     createPeerConnection();
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
@@ -254,7 +315,8 @@ async function startCall(withVideo) {
     sendSignal(callPeer, { kind: 'offer', sdp: offer, video: withVideo });
     callStatus.textContent = 'Ожидание ответа…';
   } catch (e) {
-    alert('Нет доступа к камере/микрофону');
+    alert('Нет доступа к камере/микрофону. Разрешите доступ в настройках браузера.');
+    console.error('Call start error:', e);
     endCall(false);
   }
 }
@@ -275,7 +337,6 @@ function createPeerConnection() {
       endCall(false);
     }
   };
-  // ФИКС: обработка ошибок ICE
   pc.oniceconnectionstatechange = () => {
     if (pc.iceConnectionState === 'failed') {
       endCall(false);
@@ -295,7 +356,7 @@ let pendingOffer = null;
 
 async function handleSignal(from, payload) {
   if (payload.kind === 'unavailable') {
-    alert('Пользователь не в сети');
+    alert('Пользователь не в сети или занят');
     endCall(false);
     return;
   }
@@ -303,16 +364,24 @@ async function handleSignal(from, payload) {
     callPeer = from;
     isCaller = false;
     pendingOffer = payload;
-    showCallUI(from, payload.video ? 'Входящий видеозвонок' : 'Входящий звонок', true);
+    showCallUI(from, payload.video ? 'Входящий видеозвонок 📹' : 'Входящий звонок 📞', true);
     acceptBtn.onclick = () => acceptIncomingCall(payload.video);
     return;
   }
   if (payload.kind === 'answer') {
-    await pc.setRemoteDescription(payload.sdp);
+    if (pc) {
+      await pc.setRemoteDescription(payload.sdp);
+    }
     return;
   }
   if (payload.kind === 'ice') {
-    if (pc) { try { await pc.addIceCandidate(payload.candidate); } catch (e) {} }
+    if (pc) { 
+      try { 
+        await pc.addIceCandidate(payload.candidate); 
+      } catch (e) {
+        console.error('ICE error:', e);
+      }
+    }
     return;
   }
   if (payload.kind === 'end') {
@@ -324,7 +393,10 @@ async function acceptIncomingCall(withVideo) {
   acceptBtn.classList.add('hidden');
   callStatus.textContent = 'соединение…';
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
+    localStream = await navigator.mediaDevices.getUserMedia({ 
+      audio: true, 
+      video: withVideo 
+    });
     localVideo.srcObject = localStream;
     createPeerConnection();
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
@@ -333,15 +405,22 @@ async function acceptIncomingCall(withVideo) {
     await pc.setLocalDescription(answer);
     sendSignal(callPeer, { kind: 'answer', sdp: answer });
   } catch (e) {
-    alert('Ошибка подключения');
+    alert('Ошибка подключения к звонку');
+    console.error('Accept call error:', e);
     endCall(false);
   }
 }
 
 function endCall(notify) {
   if (notify && callPeer) sendSignal(callPeer, { kind: 'end' });
-  if (pc) { pc.close(); pc = null; }
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  if (pc) { 
+    pc.close(); 
+    pc = null; 
+  }
+  if (localStream) { 
+    localStream.getTracks().forEach(t => t.stop()); 
+    localStream = null; 
+  }
   remoteVideo.srcObject = null;
   localVideo.srcObject = null;
   callOverlay.classList.add('hidden');
