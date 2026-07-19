@@ -27,6 +27,17 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
+// Настройка CORS для Render
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
   filename: (req, file, cb) => {
@@ -34,7 +45,14 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + '-' + Math.random().toString(36).slice(2, 8) + ext);
   }
 });
-const upload = multer({ storage, limits: { fileSize: 25 * 1024 * 1024 } });
+const upload = multer({ 
+  storage, 
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    // Разрешаем все типы файлов
+    cb(null, true);
+  }
+});
 
 app.post('/api/register', (req, res) => {
   const { username, password } = req.body || {};
@@ -91,10 +109,14 @@ app.get('/api/messages/:withUser', auth, (req, res) => {
 
 app.post('/api/upload', auth, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
+  const protocol = req.protocol;
+  const host = req.get('host');
+  const url = `${protocol}://${host}/uploads/${req.file.filename}`;
   res.json({
-    url: '/uploads/' + req.file.filename,
+    url: url,
     name: req.file.originalname,
-    mimetype: req.file.mimetype
+    mimetype: req.file.mimetype,
+    size: req.file.size
   });
 });
 
@@ -103,7 +125,7 @@ const wss = new WebSocket.Server({ server, path: '/ws' });
 const online = new Map();
 
 wss.on('connection', (ws, req) => {
-  const url = new URL(req.url, 'http://localhost');
+  const url = new URL(req.url, `http://${req.headers.host}`);
   const token = url.searchParams.get('token');
   let username;
   try {
@@ -137,13 +159,13 @@ wss.on('connection', (ws, req) => {
 
       const payload = JSON.stringify({ type: 'message', message: msg });
       
-      // ФИКС: отправляем ОБОИМ участникам
+      // Отправляем ОБОИМ участникам
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(payload); // отправителю
+        ws.send(payload);
       }
       const target = online.get(data.to);
       if (target && target.readyState === WebSocket.OPEN) {
-        target.send(payload); // получателю
+        target.send(payload);
       }
     }
 
@@ -178,6 +200,6 @@ function broadcastPresence() {
   }
 }
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
 });
