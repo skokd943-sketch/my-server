@@ -1,66 +1,69 @@
 * { box-sizing: border-box; }
-body {
+html, body {
   margin: 0;
+  height: 100%;
   font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   background: #0e1621;
   color: #e8e8e8;
-  height: 100vh;
-  overflow: hidden;
+  overscroll-behavior: none;
 }
+body { height: 100vh; overflow: hidden; }
 .screen { height: 100vh; }
 .hidden { display: none !important; }
 
-#authScreen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+#authScreen { display: flex; align-items: center; justify-content: center; padding: 16px; }
 .auth-box {
   background: #17212b;
   padding: 32px 24px;
-  border-radius: 16px;
-  width: min(320px, 90vw);
+  border-radius: 18px;
+  width: min(340px, 100%);
   text-align: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,.35);
 }
+.logo { font-size: 42px; margin-bottom: 4px; }
 .auth-box h1 { margin-top: 0; font-size: 22px; color: #6ab3f3; }
 .auth-box input {
   width: 100%;
-  padding: 12px;
+  padding: 13px 14px;
   margin: 8px 0;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid #2b3a4a;
   background: #0e1621;
   color: #fff;
-  font-size: 15px;
+  font-size: 16px;
 }
 .auth-box button {
   width: 100%;
-  padding: 12px;
+  padding: 13px;
   margin-top: 8px;
   border: none;
-  border-radius: 10px;
-  background: #4ea3f2;
+  border-radius: 12px;
+  background: linear-gradient(135deg,#4ea3f2,#3d7fd6);
   color: white;
   font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
 }
-.auth-box button.secondary {
-  background: transparent;
-  color: #4ea3f2;
-}
+.auth-box button.secondary { background: transparent; color: #4ea3f2; font-weight: 500; }
 .error { color: #ff6b6b; font-size: 13px; min-height: 18px; }
 
-#chatScreen {
-  display: flex;
-  height: 100vh;
+#chatScreen { display: flex; height: 100vh; }
+.avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: linear-gradient(135deg,#6ab3f3,#3d7fd6);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 15px; color: white; flex-shrink: 0;
 }
+.avatar.big { width: 84px; height: 84px; font-size: 32px; }
+.avatar::before { content: attr(data-initial); }
+
 .sidebar {
-  width: 260px;
-  min-width: 90px;
+  width: 300px;
   background: #17212b;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #0e1621;
+  flex-shrink: 0;
 }
 .me {
   padding: 14px;
@@ -70,74 +73,146 @@ body {
   justify-content: space-between;
   align-items: center;
 }
+.me-info { display: flex; align-items: center; gap: 10px; font-weight: 600; }
 .me button {
-  background: none;
-  border: 1px solid #2b3a4a;
-  color: #aaa;
-  border-radius: 6px;
-  font-size: 11px;
-  padding: 4px 8px;
-  cursor: pointer;
+  background: none; border: 1px solid #2b3a4a; color: #aaa;
+  border-radius: 8px; font-size: 12px; padding: 6px 10px; cursor: pointer;
 }
-.contact-list { overflow-y: auto; flex: 1; }
+.contact-list { overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
 .contact {
   padding: 12px 14px;
   cursor: pointer;
   border-bottom: 1px solid #1c2733;
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
-.contact:hover, .contact.active { background: #1e2c3a; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
-.dot.online { background: #4ade80; }
+.contact:active, .contact.active { background: #1e2c3a; }
+.contact-name { flex: 1; font-size: 15px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: #555; flex-shrink: 0; }
+.dot.online { background: #4ade80; box-shadow: 0 0 6px #4ade8090; }
 
-.chat { flex: 1; display: flex; flex-direction: column; }
+.chat { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .chat-header {
-  padding: 14px;
+  padding: 12px 14px;
   background: #17212b;
   border-bottom: 1px solid #0e1621;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: calc(12px + env(safe-area-inset-top));
 }
+.header-actions { margin-left: auto; display: flex; gap: 6px; }
+.icon-btn {
+  background: none; border: none; color: #cfd8e3;
+  font-size: 19px; cursor: pointer; padding: 6px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-btn:active { background: #223142; }
+.back-btn { display: none; font-size: 22px; }
+
 .messages {
   flex: 1;
   overflow-y: auto;
   padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  -webkit-overflow-scrolling: touch;
 }
+.bubble-wrap { display: flex; flex-direction: column; max-width: 78%; }
+.bubble-wrap.mine { align-self: flex-end; align-items: flex-end; }
+.bubble-wrap.theirs { align-self: flex-start; align-items: flex-start; }
 .bubble {
-  max-width: 70%;
-  padding: 8px 12px;
-  border-radius: 14px;
-  font-size: 14px;
-  line-height: 1.35;
+  padding: 9px 13px;
+  border-radius: 16px;
+  font-size: 15px;
+  line-height: 1.4;
   word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
-.bubble.mine { align-self: flex-end; background: #4ea3f2; color: white; border-bottom-right-radius: 4px; }
-.bubble.theirs { align-self: flex-start; background: #223142; border-bottom-left-radius: 4px; }
+.mine .bubble { background: linear-gradient(135deg,#4ea3f2,#3d7fd6); color: white; border-bottom-right-radius: 4px; }
+.theirs .bubble { background: #223142; border-bottom-left-radius: 4px; }
+.bubble img.msg-image, .bubble video.msg-video { max-width: 220px; border-radius: 10px; display: block; }
+.bubble audio.msg-voice { width: 200px; }
+.file-chip { display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; }
+.file-chip .file-icon { font-size: 22px; }
+.msg-time { font-size: 11px; color: #7a8899; margin-top: 3px; padding: 0 4px; }
+
 .input-row {
   display: flex;
-  padding: 10px;
-  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  gap: 6px;
   background: #17212b;
   border-top: 1px solid #0e1621;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
 }
-.input-row input {
+.input-row input#msgInput {
   flex: 1;
-  padding: 12px;
-  border-radius: 20px;
+  padding: 12px 14px;
+  border-radius: 22px;
   border: none;
   background: #0e1621;
   color: white;
-  font-size: 15px;
-}
-.input-row button {
-  width: 44px;
-  border: none;
-  border-radius: 50%;
-  background: #4ea3f2;
-  color: white;
   font-size: 16px;
-  cursor: pointer;
+  min-width: 0;
+}
+.input-row button#sendBtn {
+  width: 42px; height: 42px;
+  border: none; border-radius: 50%;
+  background: linear-gradient(135deg,#4ea3f2,#3d7fd6);
+  color: white; font-size: 16px; cursor: pointer; flex-shrink: 0;
+}
+#micBtn.recording { color: #ff5555; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.call-overlay {
+  position: fixed; inset: 0; background: #0e1621;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 50;
+}
+.call-info { text-align: center; z-index: 2; }
+#callName { font-size: 20px; font-weight: 600; margin-top: 12px; }
+#callStatus { color: #8aa; margin-top: 4px; font-size: 14px; }
+#remoteVideo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+#localVideo {
+  position: absolute; width: 110px; height: 150px; object-fit: cover;
+  bottom: calc(110px + env(safe-area-inset-bottom)); right: 16px;
+  border-radius: 12px; border: 2px solid #223142; background: #000;
+}
+.call-controls {
+  position: absolute; bottom: calc(30px + env(safe-area-inset-bottom));
+  display: flex; gap: 30px; z-index: 3;
+}
+.call-btn {
+  width: 62px; height: 62px; border-radius: 50%; border: none;
+  font-size: 26px; cursor: pointer;
+}
+.call-btn.decline { background: #e5484d; }
+.call-btn.accept { background: #4ade80; }
+
+@media (max-width: 720px) {
+  #chatScreen { position: relative; }
+  .sidebar {
+    width: 100%;
+    position: absolute; inset: 0;
+    z-index: 2;
+    transition: transform .2s ease;
+  }
+  .chat {
+    position: absolute; inset: 0;
+    z-index: 1;
+    transform: translateX(100%);
+    transition: transform .2s ease;
+  }
+  #chatScreen.chat-open .sidebar { transform: translateX(-100%); }
+  #chatScreen.chat-open .chat { transform: translateX(0); }
+  .back-btn { display: flex; }
+  #localVideo { width: 90px; height: 120px; }
+}
+
+@media (min-width: 721px) {
+  .back-btn { display: none; }
 }
