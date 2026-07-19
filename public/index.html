@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Мессенджер</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="authScreen" class="screen">
+  <div class="auth-box">
+    <h1>Мессенджер</h1>
+    <input id="authUsername" placeholder="Логин" autocomplete="username">
+    <input id="authPassword" type="password" placeholder="Пароль" autocomplete="current-password">
+    <div id="authError" class="error"></div>
+    <button id="loginBtn">Войти</button>
+    <button id="registerBtn" class="secondary">Зарегистрироваться</button>
+  </div>
+</div>
+
+<div id="chatScreen" class="screen hidden">
+  <div class="sidebar">
+    <div class="me">👤 <span id="meName"></span> <button id="logoutBtn">выйти</button></div>
+    <div id="contactList" class="contact-list"></div>
+  </div>
+  <div class="chat">
+    <div id="chatHeader" class="chat-header">Выберите собеседника</div>
+    <div id="messages" class="messages"></div>
+    <div class="input-row">
+      <input id="msgInput" placeholder="Сообщение…" disabled>
+      <button id="sendBtn" disabled>➤</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
