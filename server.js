@@ -27,14 +27,11 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Настройка CORS для Render
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
@@ -45,13 +42,10 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + '-' + Math.random().toString(36).slice(2, 8) + ext);
   }
 });
-const upload = multer({ 
-  storage, 
+const upload = multer({
+  storage,
   limits: { fileSize: 25 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    // Разрешаем все типы файлов
-    cb(null, true);
-  }
+  fileFilter: (req, file, cb) => cb(null, true)
 });
 
 app.post('/api/register', (req, res) => {
@@ -107,13 +101,13 @@ app.get('/api/messages/:withUser', auth, (req, res) => {
   res.json(thread);
 });
 
+// ВАЖНО: относительный путь, а не собранный вручную http/https адрес —
+// иначе на хостингах за прокси (Render) ссылка может получиться "http"
+// на "https" странице и браузер её заблокирует (mixed content).
 app.post('/api/upload', auth, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
-  const protocol = req.protocol;
-  const host = req.get('host');
-  const url = `${protocol}://${host}/uploads/${req.file.filename}`;
   res.json({
-    url: url,
+    url: '/uploads/' + req.file.filename,
     name: req.file.originalname,
     mimetype: req.file.mimetype,
     size: req.file.size
@@ -158,31 +152,17 @@ wss.on('connection', (ws, req) => {
       writeJSON(MESSAGES_FILE, messages);
 
       const payload = JSON.stringify({ type: 'message', message: msg });
-      
-      // Отправляем ОБОИМ участникам
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(payload);
-      }
+      if (ws.readyState === WebSocket.OPEN) ws.send(payload);
       const target = online.get(data.to);
-      if (target && target.readyState === WebSocket.OPEN) {
-        target.send(payload);
-      }
+      if (target && target.readyState === WebSocket.OPEN) target.send(payload);
     }
 
     if (data.type === 'signal') {
       const target = online.get(data.to);
       if (target && target.readyState === WebSocket.OPEN) {
-        target.send(JSON.stringify({ 
-          type: 'signal', 
-          from: username, 
-          payload: data.payload 
-        }));
+        target.send(JSON.stringify({ type: 'signal', from: username, payload: data.payload }));
       } else if (data.payload && data.payload.kind === 'offer') {
-        ws.send(JSON.stringify({ 
-          type: 'signal', 
-          from: data.to, 
-          payload: { kind: 'unavailable' } 
-        }));
+        ws.send(JSON.stringify({ type: 'signal', from: data.to, payload: { kind: 'unavailable' } }));
       }
     }
   });
