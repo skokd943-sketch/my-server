@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Мессенджер</title>
+<title>Нова</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <div class="logo">✦</div>
     <h1>Нова</h1>
     <div class="subtitle">Твой личный мессенджер</div>
-    <input id="authUsername" placeholder="Логин" autocomplete="username">
+    <input id="authUsername" placeholder="Логин (username)" autocomplete="username">
     <input id="authPassword" type="password" placeholder="Пароль" autocomplete="current-password">
     <div id="authError" class="error"></div>
     <button id="loginBtn">Войти</button>
@@ -22,37 +22,117 @@
   </div>
 </div>
 
-<div id="chatScreen" class="screen hidden">
-  <div class="sidebar" id="sidebar">
-    <div class="me">
-      <div class="me-info"><span class="avatar" id="meAvatar"></span><span id="meName"></span></div>
-      <button id="logoutBtn">Выйти</button>
-    </div>
-    <div id="contactList" class="contact-list"></div>
-  </div>
+<div id="appShell" class="hidden">
 
-  <div class="chat" id="chatPane">
-    <div id="chatHeader" class="chat-header">
-      <button id="backBtn" class="icon-btn back-btn">←</button>
-      <span class="avatar" id="chatAvatar"></span>
-      <span id="chatTitle" class="chat-title">Выберите собеседника</span>
-      <div class="header-actions">
-        <button id="callAudioBtn" class="icon-btn" title="Аудиозвонок">📞</button>
-        <button id="callVideoBtn" class="icon-btn" title="Видеозвонок">🎥</button>
+  <div id="pageChats" class="page">
+    <div class="sidebar" id="sidebar">
+      <div class="page-header">
+        <span class="page-title">Чаты</span>
+        <button id="searchOpenBtn" class="icon-btn">🔍</button>
+      </div>
+
+      <div class="stories-bar" id="storiesBar"></div>
+
+      <div id="contactList" class="contact-list"></div>
+    </div>
+
+    <div class="chat" id="chatPane">
+      <div id="chatHeader" class="chat-header">
+        <button id="backBtn" class="icon-btn back-btn">←</button>
+        <span class="avatar" id="chatAvatar"></span>
+        <span id="chatTitle" class="chat-title">Выберите собеседника</span>
+        <div class="header-actions">
+          <button id="callAudioBtn" class="icon-btn" title="Аудиозвонок">📞</button>
+          <button id="callVideoBtn" class="icon-btn" title="Видеозвонок">🎥</button>
+        </div>
+      </div>
+      <div id="messages" class="messages"></div>
+      <div class="input-row">
+        <button id="attachBtn" class="icon-btn">📎</button>
+        <input type="file" id="fileInput" hidden accept="image/*,video/*,application/*,.pdf,.doc,.docx,.zip">
+        <input id="msgInput" placeholder="Сообщение…" disabled>
+        <button id="micBtn" class="icon-btn" disabled>🎤</button>
+        <button id="sendBtn" disabled>➤</button>
       </div>
     </div>
-    <div id="messages" class="messages"></div>
-    <div class="input-row">
-      <button id="attachBtn" class="icon-btn">📎</button>
-      <input type="file" id="fileInput" hidden accept="image/*,video/*,application/*,.pdf,.doc,.docx,.zip">
-      <input id="msgInput" placeholder="Сообщение…" disabled>
-      <button id="micBtn" class="icon-btn" disabled>🎤</button>
-      <button id="sendBtn" disabled>➤</button>
+  </div>
+
+  <div id="pageFeed" class="page hidden">
+    <div class="page-header">
+      <span class="page-title">Лента</span>
     </div>
+    <div id="feedContainer" class="feed-container"></div>
+    <button id="composeOpenBtn" class="fab">+</button>
+    <input type="file" id="postFileInput" hidden accept="image/*,video/*">
+  </div>
+
+  <div id="pageProfile" class="page hidden">
+    <div class="page-header">
+      <span class="page-title">Профиль</span>
+    </div>
+    <div class="profile-view">
+      <span class="avatar big" id="myProfileAvatar"></span>
+      <div class="profile-name" id="myProfileName"></div>
+      <div class="profile-role hidden" id="myProfileRole"></div>
+      <textarea id="myBioInput" class="bio-input" maxlength="200" placeholder="Немного о себе…"></textarea>
+      <button id="saveBioBtn">Сохранить</button>
+      <button id="logoutBtn" class="secondary">Выйти из аккаунта</button>
+    </div>
+  </div>
+
+  <div class="bottom-nav" id="bottomNav">
+    <button class="nav-btn active" data-page="pageChats"><span class="nav-icon">💬</span><span>Чаты</span></button>
+    <button class="nav-btn" data-page="pageFeed"><span class="nav-icon">▶</span><span>Лента</span></button>
+    <button class="nav-btn" data-page="pageProfile"><span class="nav-icon">👤</span><span>Профиль</span></button>
   </div>
 </div>
 
-<div id="callOverlay" class="call-overlay hidden">
+<div id="searchOverlay" class="overlay hidden">
+  <div class="overlay-header">
+    <button id="searchCloseBtn" class="icon-btn">←</button>
+    <input id="searchInput" placeholder="Поиск по username…" autocomplete="off">
+  </div>
+  <div id="searchResults" class="search-results"></div>
+</div>
+
+<div id="otherProfileOverlay" class="overlay hidden">
+  <div class="overlay-header">
+    <button id="otherProfileCloseBtn" class="icon-btn">←</button>
+  </div>
+  <div class="profile-view">
+    <span class="avatar big" id="otherProfileAvatar"></span>
+    <div class="profile-name" id="otherProfileName"></div>
+    <div class="profile-role hidden" id="otherProfileRole"></div>
+    <div class="profile-bio" id="otherProfileBio"></div>
+    <button id="otherProfileMsgBtn">Написать</button>
+  </div>
+</div>
+
+<div id="storyViewerOverlay" class="overlay story-overlay hidden">
+  <div class="story-progress" id="storyProgress"></div>
+  <div class="story-head">
+    <span class="avatar" id="storyAvatar"></span>
+    <span id="storyUsername"></span>
+    <button id="storyCloseBtn" class="icon-btn">✖</button>
+  </div>
+  <div class="story-media-wrap" id="storyMediaWrap"></div>
+  <div class="story-tap-zone story-tap-left" id="storyTapLeft"></div>
+  <div class="story-tap-zone story-tap-right" id="storyTapRight"></div>
+</div>
+
+<div id="composeOverlay" class="overlay hidden">
+  <div class="overlay-header">
+    <button id="composeCloseBtn" class="icon-btn">←</button>
+    <span class="page-title">Новый пост</span>
+  </div>
+  <div class="compose-body">
+    <div id="composePreview" class="compose-preview"></div>
+    <textarea id="composeCaption" maxlength="500" placeholder="Подпись (необязательно)…"></textarea>
+    <button id="composePublishBtn">Опубликовать</button>
+  </div>
+</div>
+
+<div id="callOverlay" class="overlay call-overlay hidden">
   <div class="call-rings"><span></span><span></span><span></span></div>
   <div class="call-info">
     <span class="avatar big" id="callAvatar"></span>
