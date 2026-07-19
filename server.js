@@ -1,4 +1,3 @@
-
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -90,7 +89,6 @@ app.get('/api/messages/:withUser', auth, (req, res) => {
   res.json(thread);
 });
 
-// Загрузка фото/файла/голосового — возвращает ссылку на файл
 app.post('/api/upload', auth, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Файл не получен' });
   res.json({
@@ -126,11 +124,11 @@ wss.on('connection', (ws, req) => {
         id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
         from: username,
         to: data.to,
-        kind: data.kind || 'text',        // 'text' | 'image' | 'file' | 'voice'
+        kind: data.kind || 'text',
         text: String(data.text || '').slice(0, 4000),
         fileUrl: data.fileUrl || null,
         fileName: data.fileName || null,
-        duration: data.duration || null,  // для голосовых, секунды
+        duration: data.duration || null,
         ts: Date.now()
       };
       const messages = readJSON(MESSAGES_FILE);
@@ -138,18 +136,31 @@ wss.on('connection', (ws, req) => {
       writeJSON(MESSAGES_FILE, messages);
 
       const payload = JSON.stringify({ type: 'message', message: msg });
-      ws.send(payload);
+      
+      // ФИКС: отправляем ОБОИМ участникам
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(payload); // отправителю
+      }
       const target = online.get(data.to);
-      if (target && target.readyState === WebSocket.OPEN) target.send(payload);
+      if (target && target.readyState === WebSocket.OPEN) {
+        target.send(payload); // получателю
+      }
     }
 
-    // Сигналинг для звонков (WebRTC offer/answer/ice/end) — просто пересылаем адресату
     if (data.type === 'signal') {
       const target = online.get(data.to);
       if (target && target.readyState === WebSocket.OPEN) {
-        target.send(JSON.stringify({ type: 'signal', from: username, payload: data.payload }));
+        target.send(JSON.stringify({ 
+          type: 'signal', 
+          from: username, 
+          payload: data.payload 
+        }));
       } else if (data.payload && data.payload.kind === 'offer') {
-        ws.send(JSON.stringify({ type: 'signal', from: data.to, payload: { kind: 'unavailable' } }));
+        ws.send(JSON.stringify({ 
+          type: 'signal', 
+          from: data.to, 
+          payload: { kind: 'unavailable' } 
+        }));
       }
     }
   });
