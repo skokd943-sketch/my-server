@@ -9,9 +9,11 @@
 <body>
 
 <div id="authScreen" class="screen">
+  <div class="aurora"></div>
   <div class="auth-box">
-    <div class="logo">💬</div>
-    <h1>Мессенджер</h1>
+    <div class="logo">✦</div>
+    <h1>Нова</h1>
+    <div class="subtitle">Твой личный мессенджер</div>
     <input id="authUsername" placeholder="Логин" autocomplete="username">
     <input id="authPassword" type="password" placeholder="Пароль" autocomplete="current-password">
     <div id="authError" class="error"></div>
@@ -33,7 +35,7 @@
     <div id="chatHeader" class="chat-header">
       <button id="backBtn" class="icon-btn back-btn">←</button>
       <span class="avatar" id="chatAvatar"></span>
-      <span id="chatTitle">Выберите собеседника</span>
+      <span id="chatTitle" class="chat-title">Выберите собеседника</span>
       <div class="header-actions">
         <button id="callAudioBtn" class="icon-btn" title="Аудиозвонок">📞</button>
         <button id="callVideoBtn" class="icon-btn" title="Видеозвонок">🎥</button>
@@ -51,6 +53,7 @@
 </div>
 
 <div id="callOverlay" class="call-overlay hidden">
+  <div class="call-rings"><span></span><span></span><span></span></div>
   <div class="call-info">
     <span class="avatar big" id="callAvatar"></span>
     <div id="callName">—</div>
